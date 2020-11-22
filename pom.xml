@@ -1,0 +1,83 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>net.dollmar.tools</groupId>
+	<artifactId>hasher</artifactId>
+	<version>1.0</version>
+	<packaging>jar</packaging>
+
+	<name>Hash Calculator</name>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.tatget>1.8</maven.compiler.tatget>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<final.artifact.name>Hasher</final.artifact.name>
+		<main.class>net.dollmar.tools.Hasher</main.class>
+
+		<version.java>1.8</version.java>
+		<version.maven.compiler.plugin>3.1</version.maven.compiler.plugin>
+		<version.maven.jar.plugin>2.2</version.maven.jar.plugin>
+		<version.apache.commons.codec>1.15</version.apache.commons.codec>		
+		<version.spring.boot.plugin>2.2.6.RELEASE</version.spring.boot.plugin>
+
+	</properties>
+
+
+	<dependencies>
+		<!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk15on</artifactId>
+			<version>1.67</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/commons-codec/commons-codec -->
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>${version.apache.commons.codec}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.2</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<finalName>${final.artifact.name}</finalName>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${version.maven.compiler.plugin}</version>
+				<configuration>
+					<source>${version.java}</source>
+					<target>${version.java}</target>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>${version.spring.boot.plugin}</version>
+				<configuration>
+					<mainClass>${main.class}</mainClass>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
