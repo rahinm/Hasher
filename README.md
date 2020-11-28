@@ -10,7 +10,7 @@ You may also calcualte HMAC codes of the input data, entered in the GUI form
 (either as text string or hex-encoded string) or the contents of an input file.
 The HMAC key can also be expressed as either text format or hex-encoded format.
 
-This tool is a clone of the HashCalc tool from SlavaSoft 
+This tool is inspired by the HashCalc tool from SlavaSoft 
 (https://www.slavasoft.com/hashcalc/index.htm) and written in Java for cross-
 platform compatibility. 
 

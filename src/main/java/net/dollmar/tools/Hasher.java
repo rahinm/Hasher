@@ -21,20 +21,20 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
  * 
  * A number of hashing algorithms are supported.
  * 
- * This tool is a clone of the HashCalc tool developed by SlavaSoft
+ * This tool is inspired by the HashCalc tool developed by SlavaSoft
  * (https://www.slavasoft.com/hashcalc/index.htm).
  * 
  * This is a free software. Permission is granted for all forms of use 
  * except for any form intended for causing malicious damage.
  * 
- * @author Mohammad A. Rahin
+ * @author Mohammad A. Rahin / Dollmar Enterprises Ltd
  *
  */
 public class Hasher extends JFrame {
 	private static final long serialVersionUID = -4765249574155179019L;
 
-	private static final String VERSION_NUMBER = "1.0";
-	private static final String COPYRIGHT = "(c) 2020 Dollmar Enterprised Ltd.";
+	private static final String VERSION_NUMBER = "1.1";
+	private static final String COPYRIGHT = "(c) 2020 Dollmar Enterprises Ltd.";
 
 	public static class DigestAlgorithm {
 		private String algName;
@@ -126,7 +126,9 @@ public class Hasher extends JFrame {
 	private JButton calculateBtn;
 	private JButton clearBtn;
 	private JButton quitBtn;
-	private JButton helpBtn;
+	
+	private boolean hexEncodedOutput = true;
+	private boolean upcasedOutput = false;
 
 	private DigestWidget[] digestWidgets = new DigestWidget[ALGOS.length];
 
@@ -152,19 +154,16 @@ public class Hasher extends JFrame {
 		return "File".equals(item);
 	}
 
-	private String getDataSourceType() {
-		return (dataSource != null) ? dataSource.getItemAt(dataSource.getSelectedIndex()) : "";
+
+	private String getComboBoxLabel(JComboBox<String> cb) {
+		return (cb != null) ? cb.getItemAt(cb.getSelectedIndex()) : "";
 	}
+
 	
 	private boolean isHmacSelected() {
 		return (hmac != null) ? hmac.isSelected() : false;
 	}
 
-	private String getKeyFormat() {
-		return (keyFormat != null) ? keyFormat.getItemAt(keyFormat.getSelectedIndex()) : "";
-	}
-	
-	
 	private void setFsButtonState() {
 		if (fsButton != null) {
 			fsButton.setEnabled(isFileSourceSelected());
@@ -172,27 +171,33 @@ public class Hasher extends JFrame {
 	}
 
 	
+	/*
+	 * Performs calculation of Hash or HMAC values
+	 */
 	private void calculateHashValues() {
-		String dsType = getDataSourceType();
+		// data source
+		DataLabel ds = DataLabel.valueOfLabel(getComboBoxLabel(dataSource));
+		// key
+		DataLabel kf = DataLabel.valueOfLabel(getComboBoxLabel(keyFormat));
+
 		String keyData = hmacKey.getText().trim();
-		boolean hexEncodedKey = "Hex String".equals(getKeyFormat());
 
 		if (isHmacSelected() && (keyData == null || keyData.length() == 0)) {
 			this.showErrorMessageDialog("Error: Missing HMAC Key");
 			return;
 		}
 		
-		if ("File".equals(dsType)) {
+		if (DataLabel.FILE.equals(ds)) {
 			String fileName = dataToHash.getText().trim();
 			for (int i = 0; i < digestWidgets.length; i++) {
 				DigestWidget dw = digestWidgets[i];
 				if (dw != null & dw.isEnabled() && dw.isSelected()) {
 					String result = null;
 					if (isHmacSelected()) {
-						result = HmacCalculator.calculateFileHmac(ALGOS[i].hmacAlgName, fileName, keyData, hexEncodedKey);
+						result = HmacCalculator.calculateFileHmac(ALGOS[i].hmacAlgName, fileName, keyData, kf, hexEncodedOutput, upcasedOutput);
 					}
 					else {
-						result = HashCalculator.calculateFileHash(ALGOS[i].algName, fileName);
+						result = HashCalculator.calculateFileHash(ALGOS[i].algName, fileName, hexEncodedOutput, upcasedOutput);
 					}
 					dw.setValue(result);
 				}
@@ -200,17 +205,16 @@ public class Hasher extends JFrame {
 		}
 		else {
 			String messageData = dataToHash.getText().trim();
-			boolean hexEncodedData = "Hex String".equals(dsType);
 			
 			for (int i = 0; i < digestWidgets.length; i++) {
 				DigestWidget dw = digestWidgets[i];
 				if (dw != null & dw.isEnabled() && dw.isSelected()) {
 					String result = null;
 					if (isHmacSelected()) {
-						result = HmacCalculator.calculateHmac(ALGOS[i].hmacAlgName, messageData, hexEncodedData, keyData, hexEncodedKey);
+						result = HmacCalculator.calculateHmac(ALGOS[i].hmacAlgName, messageData, ds, keyData, kf, hexEncodedOutput, upcasedOutput);
 					}
 					else {
-						result = HashCalculator.calculateHash(ALGOS[i].algName, messageData, hexEncodedData);
+						result = HashCalculator.calculateHash(ALGOS[i].algName, messageData, ds, hexEncodedOutput, upcasedOutput);
 					}
 					dw.setValue(result);
 				}
@@ -219,6 +223,9 @@ public class Hasher extends JFrame {
 	}
 
 	
+	/*
+	 * Zaps all calculated values in preparation of next calculation action
+	 */
 	private void clearHashValues() {
 		for (int i = 0; i < digestWidgets.length; i++) {
 			DigestWidget dw = digestWidgets[i];
@@ -228,6 +235,7 @@ public class Hasher extends JFrame {
 		}
 		
 	}
+	
 	
 	public Hasher() {
 		super("Hasher");
@@ -254,25 +262,30 @@ public class Hasher extends JFrame {
 		dataPanel.add(new JLabel("Data"));
 		dataPanel.add(new JLabel(""));
 
-		String sources[] = {"File", "Text String", "Hex String" };
+		String sources[] = {DataLabel.TEXT.getLabel(), DataLabel.HEX.getLabel(), DataLabel.BASE64.getLabel(), DataLabel.FILE.getLabel()};
 		dataSource = new JComboBox<String>(sources);
-		//dataSource.setPreferredSize(new Dimension(5, 10));
-		ItemListener dsListener = new ItemListener() {
-
+		dataSource.addItemListener(new ItemListener() {
+			@Override
 			public void itemStateChanged(ItemEvent e) {
 				setFsButtonState();
+				clearHashValues();
 			}
-		};
-		dataSource.addItemListener(dsListener);
+		});
 		dataPanel.add(dataSource);
 
 		dataToHash = new JTextField(20);
+		dataToHash.getDocument().addDocumentListener((SimpleDocumentListener) e -> {
+			clearHashValues();
+			dataToHash.requestFocus();
+		});
 		dataPanel.add(dataToHash);
 
+		
 		fsButton = new JButton("...");
 		fsButton.setPreferredSize(new Dimension(20, 10));
 		setFsButtonState();
-		ActionListener doChooseFile = new ActionListener() {
+		fsButton.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent ae) {
 				JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
 				int rc = jfc.showOpenDialog(null);
@@ -283,8 +296,7 @@ public class Hasher extends JFrame {
 					}
 				}
 			}
-		};
-		fsButton.addActionListener(doChooseFile);
+		});
 		dataPanel.add(fsButton);
 
 		JPanel hmacPanel = new JPanel();
@@ -297,80 +309,126 @@ public class Hasher extends JFrame {
 		hmacPanel.add(new JLabel("Key"));
 
 		hmac = new JCheckBox("Apply HMAC Key");
-		ItemListener hmacEnabler = new ItemListener() {
-
+		hmac.addItemListener(new ItemListener() {
+			@Override
 			public void itemStateChanged(ItemEvent e) {
 				boolean state = isHmacSelected();
 				if (keyFormat != null) keyFormat.setEnabled(state);
 				if (hmacKey != null) hmacKey.setEnabled(state);
 				setDisgestWidgets();
+				clearHashValues();
 			}
-		}; 
-		hmac.addItemListener(hmacEnabler);
+		}); 
 		hmacPanel.add(hmac);
 
-		String keyFormats[] = {"Text String", "Hex String" };
+		String keyFormats[] = {DataLabel.TEXT.getLabel(), DataLabel.HEX.getLabel(), DataLabel.BASE64.getLabel()};
 		keyFormat = new JComboBox<String>(keyFormats);
 		keyFormat.setEnabled(hmac.isSelected());
+		keyFormat.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				clearHashValues();
+			}
+		});
 		hmacPanel.add(keyFormat);
 
 		hmacKey = new JTextField(20);
 		hmacKey.setEnabled(hmac.isSelected());
+		hmacKey.getDocument().addDocumentListener((SimpleDocumentListener) e -> {
+			clearHashValues();
+			hmacKey.requestFocus();
+			
+		});
 		hmacPanel.add(hmacKey);
 
+		// Result Encoding Panel
+		JPanel rePanel = new JPanel();
+		rePanel.setBorder(BorderFactory.createTitledBorder("Output Encoding"));
+		rePanel.setLayout(new GridLayout2(1, 2, 5, 5));
+		contentPane.add(rePanel);
+		
+		JCheckBox ucSelector = new JCheckBox("Upper Case");
+		ucSelector.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				upcasedOutput = ucSelector.isSelected();
+			}
+		});
+		ucSelector.setEnabled(hexEncodedOutput);
+		ucSelector.setSelected(upcasedOutput);
 
+		JRadioButton hexEncodingBtn = new JRadioButton("Hex");
+		hexEncodingBtn.setSelected(hexEncodedOutput);
+		hexEncodingBtn.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				hexEncodedOutput = hexEncodingBtn.isSelected();
+				ucSelector.setEnabled(hexEncodedOutput);
+				clearHashValues();
+			}
+		});
+		
+		JRadioButton b64EncodingBtn = new JRadioButton("Base64");
+		b64EncodingBtn.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				hexEncodedOutput = !b64EncodingBtn.isSelected();
+				ucSelector.setEnabled(hexEncodedOutput);
+				clearHashValues();
+			}
+		});
+		ButtonGroup bg = new ButtonGroup();
+		bg.add(hexEncodingBtn);
+		bg.add(b64EncodingBtn);
+
+		rePanel.add(hexEncodingBtn);
+		rePanel.add(b64EncodingBtn);
+		rePanel.add(ucSelector);
+
+		
 		JPanel resultsPanel = new JPanel();
-		resultsPanel.setBorder(BorderFactory.createTitledBorder("Calculated hash values"));
+		resultsPanel.setBorder(BorderFactory.createTitledBorder("Calculated Hash Values"));
 		resultsPanel.setLayout(new GridLayout2(ALGOS.length, 2, 5, 5));
 		contentPane.add(resultsPanel);
 
+		
 		this.buildDisgestWidgets(resultsPanel);
 
 		JPanel btnPanel = new JPanel();
 		btnPanel.setBorder(BorderFactory.createTitledBorder(""));
-		btnPanel.setLayout(new GridLayout(1, 4));
+		btnPanel.setLayout(new GridLayout(1, 3));
 		contentPane.add(btnPanel);
 
 		calculateBtn = new JButton("Calculate");
 		calculateBtn.setToolTipText("Calculates hash values");
-		ActionListener doCalculateHash = new ActionListener() {
+		calculateBtn.addActionListener(CursorController.createListener(this, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent ae) {
 				calculateHashValues();
 			}
-		};
-		ActionListener calcHash = CursorController.createListener(this, doCalculateHash);
-		calculateBtn.addActionListener(calcHash);
+		}));
 		btnPanel.add(calculateBtn);
 
 
 		clearBtn = new JButton("Clear");
 		clearBtn.setToolTipText("Clears all hash values");
-		ActionListener doClearHash = new ActionListener() {
+		clearBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent ae) {
 				clearHashValues();
 			}
-		};
-		clearBtn.addActionListener(doClearHash);
+		});
 		btnPanel.add(clearBtn);
 		
 		quitBtn = new JButton("QUIT");
-		ActionListener doQuit = new ActionListener() {
+		quitBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent ae) {
 				System.exit(ABORT);
 			}
-		}; 
-		quitBtn.addActionListener(doQuit);
+		}); 
 		btnPanel.add(quitBtn);
 
-		helpBtn = new JButton("Help");
-		helpBtn.setToolTipText("Online help");
-		ActionListener doHelp = new ActionListener() {
-			public void actionPerformed(ActionEvent ae) {
-				showInfoMessageDialog("Coming soon ....");
-			}
-		};
-		helpBtn.addActionListener(doHelp);
-		btnPanel.add(helpBtn);
 
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setSize(300, 600);
@@ -399,9 +457,6 @@ public class Hasher extends JFrame {
 		JOptionPane.showMessageDialog(this, msg, "ERROR", JOptionPane.ERROR_MESSAGE);
 	}
 
-	private void showInfoMessageDialog(final String msg) {
-		JOptionPane.showMessageDialog(this, msg, "Information", JOptionPane.INFORMATION_MESSAGE);
-	}
 
 	public static void main(String[] args) {
 		Security.addProvider(new BouncyCastleProvider());

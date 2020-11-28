@@ -9,29 +9,38 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.binary.Hex;
 
 public class HmacCalculator {
 
 	public static final String SEC_PROVIDER = "BC";
 
+
 	public static String calculateHmac(
 			final String algorithm, 
 			final String data, 
-			boolean hexEncodedData,
+			DataLabel dataEncoding,
 			final String key,
-			boolean hexEncodedKey
-			) {
+			DataLabel keyEncoding,
+			boolean hexEncodedResult,
+			boolean upperCasedResult) 
+	{
 		try {
-			byte[] dataBytes = (hexEncodedData) ? Hex.decodeHex(data): data.getBytes();
-			byte[] keyBytes = (hexEncodedKey) ? Hex.decodeHex(key) : key.getBytes();
+			byte[] dataBytes = HashCalculator.dataToBytes(data, dataEncoding);
+			if (dataBytes == null) {
+				return "Error: Invalid data encoding."; 
+			}			
+			byte[] keyBytes = HashCalculator.dataToBytes(key, keyEncoding);
+			if (keyBytes == null) {
+				return "Error: Invalid key encoding."; 
+			}			
+
 			
 			Mac mac = Mac.getInstance(algorithm, SEC_PROVIDER);
 			SecretKeySpec keySpec = new SecretKeySpec(keyBytes, algorithm);
 			mac.init(keySpec);
 			byte[] hmacBytes = mac.doFinal(dataBytes);
 			
-			return Hex.encodeHexString(hmacBytes);
+			return HashCalculator.bytesToString(hmacBytes, hexEncodedResult, upperCasedResult);
 			
 		}
 		catch (GeneralSecurityException | DecoderException e) {
@@ -44,10 +53,16 @@ public class HmacCalculator {
 			final String algorithm, 
 			final String fileName,
 			final String key,
-			boolean hexEncodedKey) {
+			DataLabel keyEncoding,
+			boolean hexEncodedResult,
+			boolean upperCasedResult) 
+	{
 		HmacInputStream his = null;
 		try {
-			byte[] keyBytes = (hexEncodedKey) ? Hex.decodeHex(key) : key.getBytes();
+			byte[] keyBytes = HashCalculator.dataToBytes(key, keyEncoding);
+			if (keyBytes == null) {
+				return "Error: Invalid key encoding."; 
+			}			
 			
 			Mac mac = Mac.getInstance(algorithm, SEC_PROVIDER);
 			SecretKeySpec keySpec = new SecretKeySpec(keyBytes, algorithm);
@@ -59,7 +74,9 @@ public class HmacCalculator {
 			while (his.read() != -1) {
 				// read the file
 			}
-			return Hex.encodeHexString(mac.doFinal());
+			byte[] hmacBytes = mac.doFinal();
+			
+			return HashCalculator.bytesToString(hmacBytes, hexEncodedResult, upperCasedResult);
 		}
 		catch (GeneralSecurityException | DecoderException | IOException e) {
 			return "Error: " + e.getMessage();
