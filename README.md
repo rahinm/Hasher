@@ -6,6 +6,8 @@ input data string or the contents of an input using a variety of message digest
 algorithms. Input data (direct input, i.e. not as file input) can be expressed
 in text format or hex-encoded text format.
 
+![Image](src/misc/Hasher.png)
+
 You may also calcualte HMAC codes of the input data, entered in the GUI form
 (either as text string or hex-encoded string) or the contents of an input file.
 The HMAC key can also be expressed as either text format or hex-encoded format.
